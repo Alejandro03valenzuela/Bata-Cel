@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Batalla de Dos Jugadores</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { display: flex; flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            background-color: #333; 
+            font-family: Arial, sans-serif; }
+        #gameCanvas { border-radius: 15px solid #333; background-color: #e0e0e0;
+        border-radius: 15px; }
+        #controls { display: flex; width: 100%; justify-content: space-between; padding: 10px; }
+        .button-group { display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            border-radius: 15px;
+        }
+        .control-button { width: 50px; height: 50px; font-size: 24px; }
+        #action-buttons { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+
+<!-- Controles táctiles -->
+<div id="controls">
+    <div class="button-group">
+        <button class="control-button" onclick="movePlayer1('up')">⬆️</button>
+        <div>
+            <button class="control-button" onclick="movePlayer1('left')">⬅️</button>
+            <button class="control-button" onclick="movePlayer1('down')">⬇️</button>
+            <button class="control-button" onclick="movePlayer1('right')">➡️</button>
+        </div>
+    </div>
+    <div id="action-buttons">
+        <button class="control-button" onclick="attackPlayer1()">🔥</button>
+        <button class="control-button" onclick="attackPlayer2()">⚔️</button>
+    </div>
+    <div class="button-group">
+        <button class="control-button" onclick="movePlayer2('up')">⬆️</button>
+        <div>
+            <button class="control-button" onclick="movePlayer2('left')">⬅️</button>
+            <button class="control-button" onclick="movePlayer2('down')">⬇️</button>
+            <button class="control-button" onclick="movePlayer2('right')">➡️</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Variables de jugador y otros ajustes
+    const player1 = { x: 100, y: 200, width: 50, height: 50, color: "red", speed: 5, health: 5, bullets: [] };
+    const player2 = { x: 650, y: 200, width: 50, height: 50, color: "blue", speed: 5, health: 5, bullets: [] };
+    const bulletSpeed = 7;
+    const bulletSize = 10;
+    let winner = null;
+
+    function drawPlayers() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = player1.color;
+        ctx.fillRect(player1.x, player1.y, player1.width, player1.height);
+        ctx.fillStyle = player2.color;
+        ctx.fillRect(player2.x, player2.y, player2.width, player2.height);
+
+        // Salud de los jugadores
+        ctx.fillStyle = "black";
+        ctx.font = "20px Arial";
+        ctx.fillText(`Player 1 Health: ${player1.health}`, 10, 20);
+        ctx.fillText(`Player 2 Health: ${player2.health}`, canvas.width - 200, 20);
+
+        // Dibujar balas
+        ctx.fillStyle = "orange";
+        player1.bullets.forEach(bullet => {
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, bulletSize, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.fillStyle = "purple";
+        player2.bullets.forEach(bullet => {
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, bulletSize, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function updateGame() {
+        if (winner) {
+            showWinnerPopup(winner);
+            return;
+        }
+        updateBullets(player1, player2);
+        updateBullets(player2, player1);
+        drawPlayers();
+
+        if (player1.health <= 0 || player2.health <= 0) {
+            winner = player1.health <= 0 ? "Player 2" : "Player 1";
+        }
+        requestAnimationFrame(updateGame);
+    }
+
+    function shootBullet(player, direction) {
+        const bullet = { x: player.x + player.width / 2, y: player.y + player.height / 2, speed: bulletSpeed * direction };
+        player.bullets.push(bullet);
+    }
+
+    function updateBullets(shooter, target) {
+        shooter.bullets.forEach((bullet, index) => {
+            bullet.x += bullet.speed;
+            if (bullet.x < target.x + target.width &&
+                bullet.x + bulletSize > target.x &&
+                bullet.y < target.y + target.height &&
+                bullet.y + bulletSize > target.y) {
+                target.health -= 1;
+                shooter.bullets.splice(index, 1);
+            }
+            if (bullet.x < 0 || bullet.x > canvas.width) {
+                shooter.bullets.splice(index, 1);
+            }
+        });
+    }
+
+    function showWinnerPopup(winner) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${winner} ha ganado el juego!`, canvas.width / 2, canvas.height / 2);
+    }
+
+    function resetGame() {
+        player1.health = 5;
+        player2.health = 5;
+        player1.x = 100;
+        player1.y = 200;
+        player2.x = 650;
+        player2.y = 200;
+        player1.bullets = [];
+        player2.bullets = [];
+        winner = null;
+        updateGame();
+    }
+
+    function movePlayer1(direction) {
+        if (direction === 'up' && player1.y > 0) player1.y -= player1.speed;
+        if (direction === 'down' && player1.y + player1.height < canvas.height) player1.y += player1.speed;
+        if (direction === 'left' && player1.x > 0) player1.x -= player1.speed;
+        if (direction === 'right' && player1.x + player1.width < canvas.width) player1.x += player1.speed;
+    }
+
+    function movePlayer2(direction) {
+        if (direction === 'up' && player2.y > 0) player2.y -= player2.speed;
+        if (direction === 'down' && player2.y + player2.height < canvas.height) player2.y += player2.speed;
+        if (direction === 'left' && player2.x > 0) player2.x -= player2.speed;
+        if (direction === 'right' && player2.x + player2.width < canvas.width) player2.x += player2.speed;
+    }
+
+    function attackPlayer1() { shootBullet(player1, 1); }
+    function attackPlayer2() { shootBullet(player2, -1); }
+
+    drawPlayers();
+    updateGame();
+</script>
+
+</body>
+</html>
